@@ -8,6 +8,7 @@ Created on Wed May 20 12:37:50 2026
 import streamlit as st
 import requests
 import pandas as pd
+import io
 
 # 1. PAGE CONFIGURATION
 st.set_page_config(page_title="Macro Dashboard", page_icon="📊", layout="wide")
@@ -89,6 +90,31 @@ col1, col2 = st.columns([2, 1])
 with col1:
     st.subheader("Data Ingestion & Latency Audit")
     st.dataframe(df_tabela, use_container_width=True, hide_index=True)
+    
+    # --- NOVOS BOTÕES DE AÇÃO ---
+    btn_col1, btn_col2 = st.columns(2)
+    
+    # Botão 1: Limpar o cache e tentar buscar a série indisponível novamente
+    with btn_col1:
+        if st.button("🔄 Force Refresh (Clear Cache)", use_container_width=True):
+            st.cache_data.clear()
+            st.rerun()
+            
+    # Botão 2: Gerar e baixar o arquivo Excel
+    with btn_col2:
+        if not df_tabela.empty:
+            buffer = io.BytesIO()
+            # Usamos o openpyxl nativo do Pandas para montar a planilha em memória
+            with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+                df_tabela.to_excel(writer, index=False, sheet_name='Dashboard Data')
+            
+            st.download_button(
+                label="📥 Download as Excel",
+                data=buffer.getvalue(),
+                file_name="Macro_Dashboard_Export.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                use_container_width=True
+            )
 
 with col2:
     st.subheader("Trend - IPCA: General")
@@ -96,3 +122,4 @@ with col2:
         st.line_chart(df_ipca)
     else:
         st.info("Chart data currently unavailable.")
+
