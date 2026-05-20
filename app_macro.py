@@ -59,7 +59,7 @@ def carregar_dados_ceic():
         else:
             ultimo_valor = "N/A"
 
-        # Latency Calculation
+        # Latency Calculation & Time Splitting
         if att_bruto and "T" in att_bruto:
             horario_sp = pd.to_datetime(att_bruto).tz_convert('America/Sao_Paulo')
             horario_oficial = horario_sp.replace(hour=9, minute=0, second=0, microsecond=0)
@@ -69,14 +69,21 @@ def carregar_dados_ceic():
                 latencia_str = "🟢 Early Release"
             else:
                 latencia_str = f"🔴 {int(atraso // 60)}m {int(atraso % 60)}s"
+                
+            # Separando a data e a hora em variáveis distintas
+            data_str = horario_sp.strftime('%Y-%m-%d')
+            hora_str = horario_sp.strftime('%H:%M')
         else:
             latencia_str = "Unknown"
+            data_str = "-"
+            hora_str = "-"
             
         lista_resultados.append({
             "Indicator": nome_ind,
             "Latest Value": ultimo_valor,
             "API Latency": latencia_str,
-            "Last Updated": horario_sp.strftime('%Y-%m-%d %H:%M') if 'horario_sp' in locals() else "-"
+            "Update Date": data_str,
+            "Update Time": hora_str
         })
         
     return pd.DataFrame(lista_resultados), df_historico_ipca
@@ -91,20 +98,17 @@ with col1:
     st.subheader("Data Ingestion & Latency Audit")
     st.dataframe(df_tabela, use_container_width=True, hide_index=True)
     
-    # --- NOVOS BOTÕES DE AÇÃO ---
+    # --- ACTION BUTTONS ---
     btn_col1, btn_col2 = st.columns(2)
     
-    # Botão 1: Limpar o cache e tentar buscar a série indisponível novamente
     with btn_col1:
         if st.button("🔄 Force Refresh (Clear Cache)", use_container_width=True):
             st.cache_data.clear()
             st.rerun()
             
-    # Botão 2: Gerar e baixar o arquivo Excel
     with btn_col2:
         if not df_tabela.empty:
             buffer = io.BytesIO()
-            # Usamos o openpyxl nativo do Pandas para montar a planilha em memória
             with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
                 df_tabela.to_excel(writer, index=False, sheet_name='Dashboard Data')
             
@@ -122,4 +126,5 @@ with col2:
         st.line_chart(df_ipca)
     else:
         st.info("Chart data currently unavailable.")
+
 
